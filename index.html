@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ligation Calculator — vector : insert setup</title>
+<meta name="description" content="Calculate vector and insert pipetting volumes for ligation, Gibson assembly and homologous-recombination cloning from concentration, length and molar ratio.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------
+   Ligation Calculator
+   Palette derived from IBM Carbon; type is IBM Plex.
+   Tokens are declared once and redefined per theme — components
+   never reference a raw hex value.
+   --------------------------------------------------------------- */
+
+:root {
+  --bg:        #eef1f4;
+  --grid:      rgba(15, 98, 254, .055);
+  --surface:   #ffffff;
+  --panel:     #f5f7f9;
+  --ink:       #0f1720;
+  --ink-2:     #4a5c6d;
+  --ink-3:     #798d9e;
+  --line:      #d5dde4;
+  --line-2:    #b9c5cf;
+
+  --accent:    #0f62fe;
+  --accent-ink:#ffffff;
+  --accent-bg: #e5eeff;
+
+  --ok:        #0e6027;
+  --ok-bg:     #defbe6;
+  --warn:      #8e6a00;
+  --warn-bg:   #fcf4d6;
+  --bad:       #a2191f;
+  --bad-bg:    #fff1f1;
+
+  --seg-vec:   #0f62fe;
+  --seg-ins:   #009d9a;
+  --seg-mix:   #8a3ffc;
+  --seg-water: #c6d3de;
+
+  --shadow: 0 1px 1px rgba(15,23,32,.05), 0 10px 30px -18px rgba(15,23,32,.45);
+
+  --sans: "IBM Plex Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", "Segoe UI Semibold", "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #0d1116;
+    --grid:      rgba(120, 169, 255, .06);
+    --surface:   #161c24;
+    --panel:     #1c242e;
+    --ink:       #eef3f8;
+    --ink-2:     #a8b8c6;
+    --ink-3:     #74869a;
+    --line:      #2a343f;
+    --line-2:    #3d4a58;
+
+    --accent:    #78a9ff;
+    --accent-ink:#0b1220;
+    --accent-bg: #1a2740;
+
+    --ok:        #42be65;
+    --ok-bg:     #102b18;
+    --warn:      #f1c21b;
+    --warn-bg:   #2f2708;
+    --bad:       #ff8389;
+    --bad-bg:    #35151a;
+
+    --seg-vec:   #78a9ff;
+    --seg-ins:   #3ddbd9;
+    --seg-mix:   #be95ff;
+    --seg-water: #39434f;
+
+    --shadow: 0 1px 1px rgba(0,0,0,.5), 0 10px 30px -18px rgba(0,0,0,.9);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:#0d1116; --grid:rgba(120,169,255,.06); --surface:#161c24; --panel:#1c242e;
+  --ink:#eef3f8; --ink-2:#a8b8c6; --ink-3:#74869a; --line:#2a343f; --line-2:#3d4a58;
+  --accent:#78a9ff; --accent-ink:#0b1220; --accent-bg:#1a2740;
+  --ok:#42be65; --ok-bg:#102b18; --warn:#f1c21b; --warn-bg:#2f2708; --bad:#ff8389; --bad-bg:#35151a;
+  --seg-vec:#78a9ff; --seg-ins:#3ddbd9; --seg-mix:#be95ff; --seg-water:#39434f;
+  --shadow: 0 1px 1px rgba(0,0,0,.5), 0 10px 30px -18px rgba(0,0,0,.9);
+}
+
+:root[data-theme="light"] {
+  --bg:#eef1f4; --grid:rgba(15,98,254,.055); --surface:#ffffff; --panel:#f5f7f9;
+  --ink:#0f1720; --ink-2:#4a5c6d; --ink-3:#798d9e; --line:#d5dde4; --line-2:#b9c5cf;
+  --accent:#0f62fe; --accent-ink:#ffffff; --accent-bg:#e5eeff;
+  --ok:#0e6027; --ok-bg:#defbe6; --warn:#8e6a00; --warn-bg:#fcf4d6; --bad:#a2191f; --bad-bg:#fff1f1;
+  --seg-vec:#0f62fe; --seg-ins:#009d9a; --seg-mix:#8a3ffc; --seg-water:#c6d3de;
+  --shadow: 0 1px 1px rgba(15,23,32,.05), 0 10px 30px -18px rgba(15,23,32,.45);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, p, ul, ol, figure { margin: 0; }
+ul { padding: 0; list-style: none; }
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 20px 80px;
+}
+
+/* ------------------------------ masthead ------------------------------ */
+
+.masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 26px;
+}
+
+@media (max-width: 640px) {
+  .masthead { grid-template-columns: minmax(0, 1fr); align-items: start; }
+}
+
+.eyebrow {
+  font-family: var(--cond);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.masthead h1 {
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -.025em;
+  line-height: 1.1;
+  text-wrap: balance;
+  margin: 6px 0 8px;
+}
+
+.masthead .lede {
+  color: var(--ink-2);
+  max-width: 60ch;
+}
+
+.theme-btn {
+  font-family: var(--cond);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .12s, border-color .12s;
+}
+
+.theme-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.equation {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  padding: 11px 15px;
+  margin-bottom: 26px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.equation b { color: var(--ink); font-weight: 600; }
+
+/* ------------------------------ layout ------------------------------ */
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+@media (max-width: 940px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+.column { display: flex; flex-direction: column; gap: 20px; }
+
+/* ------------------------------ panels ------------------------------ */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  box-shadow: var(--shadow);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.panel-head .tag {
+  font-family: var(--cond);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.panel-body { padding: 20px; }
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .field-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.field > label {
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.field .unit {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.field .note { font-size: 12px; color: var(--ink-3); }
+
+input[type="number"] {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-bottom: 2px solid var(--line-2);
+  border-radius: 0;
+  padding: 9px 11px;
+  width: 100%;
+  transition: border-color .12s, background .12s;
+}
+
+input[type="number"]:hover { border-color: var(--ink-3); }
+
+input[type="number"]:focus-visible {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--line-2);
+  border-bottom-color: var(--accent);
+  box-shadow: inset 0 -1px 0 0 var(--accent);
+}
+
+input[type="number"].invalid {
+  border-color: var(--bad);
+  border-bottom-color: var(--bad);
+}
+
+/* ------------------------------ choices ------------------------------ */
+
+.choices { display: flex; flex-wrap: wrap; gap: 0; }
+
+.choices input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.choices label {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  margin-left: -1px;
+  transition: background .12s, color .12s, border-color .12s;
+}
+
+.choices label:first-of-type { margin-left: 0; }
+
+.choices label:hover { color: var(--accent); border-color: var(--accent); position: relative; z-index: 1; }
+
+.choices input:checked + label {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  position: relative;
+  z-index: 2;
+}
+
+.choices input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; z-index: 3; }
+
+.ratio-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.ratio-row .custom { min-width: 150px; }
+
+.mode-field { margin-top: 18px; }
+
+/* ------------------------------ readout ------------------------------ */
+
+.readout { position: sticky; top: 20px; }
+
+@media (max-width: 940px) {
+  .readout { position: static; }
+}
+
+.readout .panel-head {
+  background: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.readout .panel-head .tag { color: var(--bg); }
+.readout .panel-head .echo {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--bg);
+  font-variant-numeric: tabular-nums;
+  opacity: .8;
+}
+
+.lines { padding: 2px 20px 6px; }
+
+.line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.line:last-child { border-bottom: none; }
+
+.line .swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 1px;
+  margin-right: 8px;
+  vertical-align: baseline;
+}
+
+.line .name { font-size: 13.5px; font-weight: 500; }
+.line .sub { display: block; margin-left: 17px; font-size: 12px; color: var(--ink-3); font-family: var(--mono); }
+.line .sub.plain { margin-left: 0; font-family: var(--sans); }
+
+.line .value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: -.03em;
+  white-space: nowrap;
+}
+
+.line .value .u { font-size: 12px; color: var(--ink-3); margin-left: 4px; letter-spacing: 0; }
+
+.line.sum { border-top: 2px solid var(--ink); }
+.line.sum .value { color: var(--accent); font-weight: 600; }
+.line.soft .value { font-size: 19px; color: var(--ink-2); }
+
+/* ------------------------------ volume bar ------------------------------ */
+
+.bar-wrap { padding: 16px 20px 20px; border-top: 1px solid var(--line); }
+
+.bar-label {
+  font-family: var(--cond);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 9px;
+}
+
+.bar {
+  display: flex;
+  height: 26px;
+  width: 100%;
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  transition: width .18s ease;
+}
+
+.bar-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-keys li { display: flex; align-items: center; gap: 7px; }
+
+.bar-keys i {
+  width: 9px; height: 9px; border-radius: 1px; display: block; flex-shrink: 0;
+}
+
+/* ------------------------------ status ------------------------------ */
+
+.status {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.status .mark { font-family: var(--mono); font-weight: 600; flex-shrink: 0; }
+.status strong { display: block; font-weight: 600; }
+.status .detail { opacity: .9; }
+
+.status.ok   { background: var(--ok-bg);   color: var(--ok); }
+.status.warn { background: var(--warn-bg); color: var(--warn); }
+.status.bad  { background: var(--bad-bg);  color: var(--bad); }
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 9px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--ink);
+  transition: color .12s, border-color .12s;
+}
+
+.btn:hover { color: var(--accent); border-color: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tools .flash { font-size: 12px; color: var(--ink-3); font-family: var(--mono); }
+
+.blank { padding: 46px 22px; text-align: center; color: var(--ink-3); font-size: 13.5px; }
+
+/* ------------------------------ footer ------------------------------ */
+
+.colophon {
+  margin-top: 34px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-3);
+  max-width: 82ch;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.colophon strong { color: var(--ink-2); font-weight: 600; }
+.colophon a { color: var(--accent); }
+.colophon code { font-family: var(--mono); font-size: 12px; }
+
+[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Molecular cloning · bench tool</div>
+      <h1>Ligation Calculator</h1>
+      <p class="lede">Work out how much vector and insert to pipette for a ligation, Gibson assembly, or homologous-recombination reaction. Enter concentrations, lengths, and the molar ratio you want — the volumes update as you type.</p>
+    </div>
+    <button type="button" class="theme-btn" id="themeBtn" aria-pressed="false">Toggle theme</button>
+  </header>
+
+  <div class="equation">
+    <b>V<sub>insert</sub></b> = R × (C<sub>vector</sub> × V<sub>vector</sub>) × L<sub>insert</sub> ÷ (C<sub>insert</sub> × L<sub>vector</sub>)
+    &nbsp;·&nbsp; length in bp stands in for molar mass
+  </div>
+
+  <div class="columns">
+
+    <!-- ===================== INPUTS ===================== -->
+    <form class="column" id="form" autocomplete="off">
+
+      <section class="panel">
+        <div class="panel-head"><span class="tag">1 · DNA stocks</span></div>
+        <div class="panel-body">
+          <div class="field-grid">
+            <div class="field">
+              <label for="cv">Vector concentration <span class="unit">ng/µL</span></label>
+              <input type="number" id="cv" step="any" min="0" value="50" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="ci">Insert concentration <span class="unit">ng/µL</span></label>
+              <input type="number" id="ci" step="any" min="0" value="80" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="lv">Vector length <span class="unit">bp</span></label>
+              <input type="number" id="lv" step="any" min="0" value="5000" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="li">Insert length <span class="unit">bp</span></label>
+              <input type="number" id="li" step="any" min="0" value="1000" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="tag">2 · Molar ratio — vector : insert</span></div>
+        <div class="panel-body">
+          <div class="ratio-row">
+            <div class="choices" role="group" aria-label="Molar ratio preset">
+              <input type="radio" name="rp" id="rp1" value="1"><label for="rp1">1 : 1</label>
+              <input type="radio" name="rp" id="rp2" value="2"><label for="rp2">1 : 2</label>
+              <input type="radio" name="rp" id="rp3" value="3" checked><label for="rp3">1 : 3</label>
+              <input type="radio" name="rp" id="rp5" value="5"><label for="rp5">1 : 5</label>
+            </div>
+            <div class="field custom">
+              <label for="ratio">Custom ratio <span class="unit">R</span></label>
+              <input type="number" id="ratio" step="any" min="0" value="3" inputmode="decimal">
+              <span class="note">For 1 : 3, enter 3</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="tag">3 · What to hold fixed</span></div>
+        <div class="panel-body">
+          <div class="choices" role="group" aria-label="Calculation mode">
+            <input type="radio" name="mode" id="modeVol" value="vol" checked><label for="modeVol">Vector volume</label>
+            <input type="radio" name="mode" id="modeMass" value="mass"><label for="modeMass">Vector mass</label>
+          </div>
+
+          <div class="field mode-field" id="volField">
+            <label for="vv">Vector volume to pipette <span class="unit">µL</span></label>
+            <input type="number" id="vv" step="any" min="0" value="1" inputmode="decimal">
+            <span class="note">Usually 1–2 µL</span>
+          </div>
+
+          <div class="field mode-field" id="massField" hidden>
+            <label for="mv">Vector mass to add <span class="unit">ng</span></label>
+            <input type="number" id="mv" step="any" min="0" value="50" inputmode="decimal">
+            <span class="note">Usually 50–100 ng</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="tag">4 · Reaction volume</span><span class="tag">optional</span></div>
+        <div class="panel-body">
+          <div class="field-grid">
+            <div class="field">
+              <label for="tot">Total reaction <span class="unit">µL</span></label>
+              <input type="number" id="tot" step="any" min="0" value="20" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="mix">Enzyme + buffer <span class="unit">µL</span></label>
+              <input type="number" id="mix" step="any" min="0" value="0" inputmode="decimal">
+              <span class="note">From your kit's manual</span>
+            </div>
+          </div>
+          <p class="note" style="margin-top:12px">Set the total to 0 to skip the water calculation.</p>
+        </div>
+      </section>
+
+    </form>
+
+    <!-- ===================== READOUT ===================== -->
+    <div class="column">
+      <div class="panel readout">
+        <div class="panel-head">
+          <span class="tag">Pipetting scheme</span>
+          <span class="echo" id="echo">1 : 3</span>
+        </div>
+
+        <div id="readoutBody" aria-live="polite">
+          <div class="lines">
+            <div class="line">
+              <div class="name"><i class="swatch" style="background:var(--seg-vec)"></i>Vector<span class="sub" id="vecMass">—</span></div>
+              <div class="value" id="vecVol">—<span class="u">µL</span></div>
+            </div>
+            <div class="line">
+              <div class="name"><i class="swatch" style="background:var(--seg-ins)"></i>Insert<span class="sub" id="insMass">—</span></div>
+              <div class="value" id="insVol">—<span class="u">µL</span></div>
+            </div>
+            <div class="line soft" id="mixLine" hidden>
+              <div class="name"><i class="swatch" style="background:var(--seg-mix)"></i>Enzyme + buffer<span class="sub plain">as specified</span></div>
+              <div class="value" id="mixVol">—<span class="u">µL</span></div>
+            </div>
+            <div class="line soft" id="waterLine" hidden>
+              <div class="name"><i class="swatch" style="background:var(--seg-water)"></i>Nuclease-free water<span class="sub plain" id="waterSub">to final volume</span></div>
+              <div class="value" id="waterVol">—<span class="u">µL</span></div>
+            </div>
+            <div class="line sum">
+              <div class="name" id="sumName">DNA subtotal<span class="sub plain">vector + insert</span></div>
+              <div class="value" id="sumVol">—<span class="u">µL</span></div>
+            </div>
+          </div>
+
+          <figure class="bar-wrap" id="barWrap" hidden>
+            <figcaption class="bar-label">Reaction composition</figcaption>
+            <div class="bar" id="bar" role="img" aria-label="Proportion of the reaction taken by each component">
+              <span id="segVec" style="background:var(--seg-vec)"></span>
+              <span id="segIns" style="background:var(--seg-ins)"></span>
+              <span id="segMix" style="background:var(--seg-mix)"></span>
+              <span id="segWater" style="background:var(--seg-water)"></span>
+            </div>
+            <ul class="bar-keys" id="barKeys"></ul>
+          </figure>
+
+          <div class="status ok" id="status">
+            <span class="mark" id="statusMark">OK</span>
+            <div>
+              <strong id="statusTitle">Volumes are workable</strong>
+              <span class="detail" id="statusDetail">Both volumes clear 0.5 µL.</span>
+            </div>
+          </div>
+
+          <div class="tools">
+            <button type="button" class="btn" id="copyBtn">Copy protocol</button>
+            <button type="button" class="btn" id="resetBtn">Reset</button>
+            <span class="flash" id="flash"></span>
+          </div>
+        </div>
+
+        <div class="blank" id="readoutBlank" hidden>Fill every highlighted field with a number greater than zero.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="colophon">
+    <p><strong>How the ratio is calculated.</strong> Molar amount is taken as proportional to length in base pairs, which is the usual bench approximation. It ignores GC-content and end-modification effects on true molecular weight — fine for setting up a cloning reaction, not a substitute for a spectrophotometric molarity measurement.</p>
+    <p><strong>Why 0.5 µL matters.</strong> Air-displacement pipettes lose accuracy fast below about 0.5 µL. Vector and insert are checked separately, so if both are too small you are told about both.</p>
+    <p>Runs entirely in your browser — nothing is uploaded, and the page works offline once loaded. MIT licensed.</p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var FIELDS = ['cv', 'ci', 'lv', 'li', 'ratio', 'vv', 'mv', 'tot', 'mix'];
+  var DEFAULTS = { cv: 50, ci: 80, lv: 5000, li: 1000, ratio: 3, vv: 1, mv: 50, tot: 20, mix: 0 };
+  var el = {};
+  FIELDS.forEach(function (k) { el[k] = $(k); });
+
+  var MIN_PIPETTE = 0.5;
+  var plan = '';
+
+  function val(node) {
+    var n = parseFloat(node.value);
+    return isFinite(n) ? n : NaN;
+  }
+
+  function fx(n, d) { return n.toFixed(d); }
+
+  function mode() { return document.querySelector('input[name="mode"]:checked').value; }
+
+  function setValue(node, text, unit) {
+    node.textContent = text;
+    var u = document.createElement('span');
+    u.className = 'u';
+    u.textContent = unit;
+    node.appendChild(u);
+  }
+
+  /* ---- ratio presets stay in sync with the custom box, both ways ---- */
+
+  var presets = Array.prototype.slice.call(document.querySelectorAll('input[name="rp"]'));
+
+  presets.forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      el.ratio.value = radio.value;
+      render();
+    });
+  });
+
+  el.ratio.addEventListener('input', syncPresets);
+
+  function syncPresets() {
+    var v = parseFloat(el.ratio.value);
+    presets.forEach(function (radio) {
+      radio.checked = (parseFloat(radio.value) === v);
+    });
+  }
+
+  /* ---- mode switch reveals only the field it needs ---- */
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="mode"]'), function (radio) {
+    radio.addEventListener('change', function () {
+      var byVolume = mode() === 'vol';
+      $('volField').hidden = !byVolume;
+      $('massField').hidden = byVolume;
+      render();
+    });
+  });
+
+  FIELDS.forEach(function (k) { el[k].addEventListener('input', render); });
+
+  /* ---- the calculation ---- */
+
+  function render() {
+    var cv = val(el.cv), ci = val(el.ci), lv = val(el.lv), li = val(el.li), R = val(el.ratio);
+    var byVolume = mode() === 'vol';
+
+    var required = [
+      [el.cv, cv], [el.ci, ci], [el.lv, lv], [el.li, li], [el.ratio, R],
+      byVolume ? [el.vv, val(el.vv)] : [el.mv, val(el.mv)]
+    ];
+
+    var complete = true;
+    required.forEach(function (pair) {
+      var bad = !(pair[1] > 0);
+      pair[0].classList.toggle('invalid', bad);
+      if (bad) complete = false;
+    });
+    (byVolume ? el.mv : el.vv).classList.remove('invalid');
+
+    $('echo').textContent = '1 : ' + (isFinite(R) ? R : '—');
+    $('readoutBody').hidden = !complete;
+    $('readoutBlank').hidden = complete;
+    if (!complete) return;
+
+    var vVec, mVec;
+    if (byVolume) {
+      vVec = val(el.vv);
+      mVec = cv * vVec;
+    } else {
+      mVec = val(el.mv);
+      vVec = mVec / cv;
+    }
+
+    var vIns = (R * cv * vVec * li) / (ci * lv);
+    var mIns = ci * vIns;
+    var dna = vVec + vIns;
+
+    setValue($('vecVol'), fx(vVec, 3), 'µL');
+    setValue($('insVol'), fx(vIns, 3), 'µL');
+    $('vecMass').textContent = fx(mVec, 2) + ' ng';
+    $('insMass').textContent = fx(mIns, 2) + ' ng';
+
+    /* optional make-up water */
+    var total = val(el.tot);
+    var mix = val(el.mix);
+    if (!isFinite(mix) || mix < 0) mix = 0;
+
+    var usingTotal = isFinite(total) && total > 0;
+    var water = usingTotal ? total - dna - mix : NaN;
+    var over = usingTotal && water < 0;
+
+    $('mixLine').hidden = !(usingTotal && mix > 0);
+    if (usingTotal && mix > 0) setValue($('mixVol'), fx(mix, 3), 'µL');
+
+    $('waterLine').hidden = !usingTotal;
+    if (usingTotal) {
+      setValue($('waterVol'), over ? '—' : fx(water, 3), 'µL');
+      $('waterSub').textContent = over
+        ? 'over by ' + fx(-water, 3) + ' µL'
+        : 'to a final ' + fx(total, 1) + ' µL';
+    }
+
+    if (usingTotal && !over) {
+      $('sumName').innerHTML = 'Total reaction<span class="sub plain">as assembled</span>';
+      setValue($('sumVol'), fx(total, 3), 'µL');
+    } else {
+      $('sumName').innerHTML = 'DNA subtotal<span class="sub plain">vector + insert</span>';
+      setValue($('sumVol'), fx(dna, 3), 'µL');
+    }
+
+    drawBar(usingTotal && !over, vVec, vIns, mix, water, total);
+    setStatus(vVec, vIns, over, water);
+
+    plan = [
+      'Ligation / recombination setup',
+      'Vector  ' + cv + ' ng/uL, ' + lv + ' bp',
+      'Insert  ' + ci + ' ng/uL, ' + li + ' bp',
+      'Molar ratio vector:insert = 1:' + R,
+      '',
+      'Vector             ' + fx(vVec, 3) + ' uL  (' + fx(mVec, 2) + ' ng)',
+      'Insert             ' + fx(vIns, 3) + ' uL  (' + fx(mIns, 2) + ' ng)',
+      (usingTotal && mix > 0 ? 'Enzyme + buffer    ' + fx(mix, 3) + ' uL' : ''),
+      (usingTotal && !over ? 'Water              ' + fx(water, 3) + ' uL' : ''),
+      (usingTotal && !over ? 'Total              ' + fx(total, 3) + ' uL'
+                           : 'DNA subtotal       ' + fx(dna, 3) + ' uL')
+    ].filter(function (line) { return line !== ''; }).join('\n');
+  }
+
+  /* ---- proportional composition bar ---- */
+
+  function drawBar(show, vVec, vIns, mix, water, total) {
+    $('barWrap').hidden = !show;
+    if (!show) return;
+
+    var parts = [
+      { id: 'segVec',   key: 'Vector',          v: vVec,  c: 'var(--seg-vec)' },
+      { id: 'segIns',   key: 'Insert',          v: vIns,  c: 'var(--seg-ins)' },
+      { id: 'segMix',   key: 'Enzyme + buffer', v: mix,   c: 'var(--seg-mix)' },
+      { id: 'segWater', key: 'Water',           v: water, c: 'var(--seg-water)' }
+    ];
+
+    var keys = $('barKeys');
+    keys.textContent = '';
+
+    parts.forEach(function (p) {
+      var pct = total > 0 ? (p.v / total) * 100 : 0;
+      $(p.id).style.width = Math.max(0, pct) + '%';
+      if (p.v <= 0) return;
+
+      var li = document.createElement('li');
+      var chip = document.createElement('i');
+      chip.style.background = p.c;
+      li.appendChild(chip);
+      li.appendChild(document.createTextNode(p.key + ' ' + fx(pct, 1) + '%'));
+      keys.appendChild(li);
+    });
+
+    $('bar').setAttribute('aria-label',
+      parts.filter(function (p) { return p.v > 0; })
+           .map(function (p) { return p.key + ' ' + fx((p.v / total) * 100, 1) + ' percent'; })
+           .join(', '));
+  }
+
+  /* ---- pipetting sanity checks ---- */
+
+  function setStatus(vVec, vIns, over, water) {
+    var issues = [];
+
+    if (over) {
+      issues.push({
+        bad: true,
+        title: 'Over the reaction volume',
+        detail: 'The components exceed the total by ' + fx(-water, 3) + ' µL. Take less vector, or scale the reaction up.'
+      });
+    }
+    if (vIns < MIN_PIPETTE) {
+      issues.push({
+        bad: false,
+        title: 'Insert volume is very small',
+        detail: fx(vIns, 3) + ' µL is below 0.5 µL, so pipetting error will be large. Take more vector, or dilute the insert.'
+      });
+    }
+    if (vVec < MIN_PIPETTE) {
+      issues.push({
+        bad: false,
+        title: 'Vector volume is very small',
+        detail: fx(vVec, 3) + ' µL is below 0.5 µL, so pipetting error will be large. Take more vector, or dilute it.'
+      });
+    }
+
+    var box = $('status');
+    if (!issues.length) {
+      box.className = 'status ok';
+      $('statusMark').textContent = 'OK';
+      $('statusTitle').textContent = 'Volumes are workable';
+      $('statusDetail').textContent = 'Both volumes clear 0.5 µL and the reaction fits.';
+      return;
+    }
+
+    var critical = issues.some(function (i) { return i.bad; });
+    box.className = 'status ' + (critical ? 'bad' : 'warn');
+    $('statusMark').textContent = critical ? '!!' : '!';
+    $('statusTitle').textContent = issues.map(function (i) { return i.title; }).join(' · ');
+    $('statusDetail').textContent = issues.map(function (i) { return i.detail; }).join(' ');
+  }
+
+  /* ---- tools ---- */
+
+  function flash(msg) {
+    var f = $('flash');
+    f.textContent = msg;
+    window.setTimeout(function () { f.textContent = ''; }, 2400);
+  }
+
+  $('copyBtn').addEventListener('click', function () {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(plan).then(
+        function () { flash('Copied'); },
+        legacyCopy
+      );
+    } else {
+      legacyCopy();
+    }
+  });
+
+  function legacyCopy() {
+    var ta = document.createElement('textarea');
+    ta.value = plan;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    var done = false;
+    try { done = document.execCommand('copy'); } catch (e) { done = false; }
+    document.body.removeChild(ta);
+    flash(done ? 'Copied' : 'Copy blocked — select the text instead');
+  }
+
+  $('resetBtn').addEventListener('click', function () {
+    FIELDS.forEach(function (k) { el[k].value = DEFAULTS[k]; });
+    document.getElementById('modeVol').checked = true;
+    $('volField').hidden = false;
+    $('massField').hidden = true;
+    syncPresets();
+    render();
+    flash('Reset');
+  });
+
+  /* ---- theme toggle, on top of the OS preference ---- */
+
+  var themeBtn = $('themeBtn');
+  themeBtn.addEventListener('click', function () {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (!document.documentElement.hasAttribute('data-theme')) {
+      dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    themeBtn.setAttribute('aria-pressed', String(!dark));
+  });
+
+  syncPresets();
+  render();
+})();
+</script>
+</body>
+</html>
