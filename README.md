@@ -47,7 +47,11 @@ The 0.5 µL threshold is a rule of thumb for air-displacement pipettes, not a sp
 
 **Online** — use the link above.
 
-**Offline** — download `index.html` and open it. Everything is inlined; the only external request is the webfont, and the page falls back to a system stack without it. Nothing is uploaded anywhere, and there is no analytics or tracking of any kind. The calculation happens entirely in your browser, which also means it is fine to use on a machine that handles unpublished data.
+**Offline** — download `index.html` and open it. All the CSS and JavaScript are inlined; the page falls back to system fonts without a network and stays fully functional.
+
+**On privacy** — nothing you type is transmitted, stored, or logged. There is no server, no analytics, no cookies, no `localStorage`. The calculation happens entirely in your browser, so it is fine to use with unpublished data. To be precise about the one exception: the page requests its typefaces from Google Fonts, so Google sees the IP address of anyone loading it. That is the only outbound request in the file, it carries none of your input, and deleting the three `<link>` tags in the `<head>` removes it at the cost of the typography.
+
+A `Content-Security-Policy` is declared in the document head — `default-src 'none'` with a narrow allowlist — so the page cannot make network calls or load third-party scripts even if it were modified to try.
 
 **On a lab computer** — copy `index.html` onto a USB stick. It needs no network, no Python, and no admin rights to run.
 

@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- GitHub Pages cannot set response headers, so the policy is declared here.
+     frame-ancestors, sandbox and report-uri are ignored in a meta tag by
+     spec, so they are deliberately omitted rather than listed for show. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Ligation Calculator — vector : insert setup</title>
 <meta name="description" content="Calculate vector and insert pipetting volumes for ligation, Gibson assembly and homologous-recombination cloning from concentration, length and molar ratio.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -704,7 +708,7 @@ input[type="number"].invalid {
   <footer class="colophon">
     <p><strong>How the ratio is calculated.</strong> Molar amount is taken as proportional to length in base pairs, which is the usual bench approximation. It ignores GC-content and end-modification effects on true molecular weight — fine for setting up a cloning reaction, not a substitute for a spectrophotometric molarity measurement.</p>
     <p><strong>Why 0.5 µL matters.</strong> Air-displacement pipettes lose accuracy fast below about 0.5 µL. Vector and insert are checked separately, so if both are too small you are told about both.</p>
-    <p>Runs entirely in your browser — nothing is uploaded, and the page works offline once loaded. MIT licensed.</p>
+    <p><strong>Your data stays here.</strong> The calculation runs entirely in your browser. Nothing you type is transmitted, stored, or logged — there is no analytics and no server. The page does request its typefaces from Google Fonts, which like any web font sees your IP address; that is the only outbound request, and the page works without it.</p>
   </footer>
 
 </div>
@@ -722,12 +726,26 @@ input[type="number"].invalid {
   var MIN_PIPETTE = 0.5;
   var plan = '';
 
+  var BLANK_INCOMPLETE = 'Fill every highlighted field with a number greater than zero.';
+  var BLANK_OVERFLOW = 'Those values are too large for the browser to represent — the result would be infinite. Check the concentrations and lengths.';
+
   function val(node) {
     var n = parseFloat(node.value);
     return isFinite(n) ? n : NaN;
   }
 
   function fx(n, d) { return n.toFixed(d); }
+
+  function showBlank(message) {
+    $('readoutBlank').textContent = message;
+    $('readoutBlank').hidden = false;
+    $('readoutBody').hidden = true;
+  }
+
+  function showReadout() {
+    $('readoutBlank').hidden = true;
+    $('readoutBody').hidden = false;
+  }
 
   function mode() { return document.querySelector('input[name="mode"]:checked').value; }
 
@@ -792,9 +810,7 @@ input[type="number"].invalid {
     (byVolume ? el.mv : el.vv).classList.remove('invalid');
 
     $('echo').textContent = '1 : ' + (isFinite(R) ? R : '—');
-    $('readoutBody').hidden = !complete;
-    $('readoutBlank').hidden = complete;
-    if (!complete) return;
+    if (!complete) { showBlank(BLANK_INCOMPLETE); return; }
 
     var vVec, mVec;
     if (byVolume) {
@@ -809,16 +825,32 @@ input[type="number"].invalid {
     var mIns = ci * vIns;
     var dna = vVec + vIns;
 
+    /* Each input can be finite while the product of them is not — e.g. a
+       concentration near 1e308, or a large mass over a near-zero
+       concentration. Validating the inputs alone would let "Infinity uL"
+       render as if it were a real volume. */
+    if (!isFinite(vVec) || !isFinite(vIns) || !isFinite(dna)) {
+      showBlank(BLANK_OVERFLOW);
+      return;
+    }
+
+    showReadout();
     setValue($('vecVol'), fx(vVec, 3), 'µL');
     setValue($('insVol'), fx(vIns, 3), 'µL');
     $('vecMass').textContent = fx(mVec, 2) + ' ng';
     $('insMass').textContent = fx(mIns, 2) + ' ng';
 
-    /* optional make-up water */
+    /* optional make-up water — these two are not in the required set, so a
+       negative entry used to be clamped to zero in silence and quietly
+       skewed the plan. Flag it instead. */
     var total = val(el.tot);
-    var mix = val(el.mix);
-    if (!isFinite(mix) || mix < 0) mix = 0;
+    var mixRaw = val(el.mix);
 
+    var negativeEntry = (isFinite(total) && total < 0) || (isFinite(mixRaw) && mixRaw < 0);
+    el.tot.classList.toggle('invalid', isFinite(total) && total < 0);
+    el.mix.classList.toggle('invalid', isFinite(mixRaw) && mixRaw < 0);
+
+    var mix = (isFinite(mixRaw) && mixRaw > 0) ? mixRaw : 0;
     var usingTotal = isFinite(total) && total > 0;
     var water = usingTotal ? total - dna - mix : NaN;
     var over = usingTotal && water < 0;
@@ -843,7 +875,7 @@ input[type="number"].invalid {
     }
 
     drawBar(usingTotal && !over, vVec, vIns, mix, water, total);
-    setStatus(vVec, vIns, over, water);
+    setStatus(vVec, vIns, over, water, negativeEntry);
 
     plan = [
       'Ligation / recombination setup',
@@ -897,9 +929,16 @@ input[type="number"].invalid {
 
   /* ---- pipetting sanity checks ---- */
 
-  function setStatus(vVec, vIns, over, water) {
+  function setStatus(vVec, vIns, over, water, negativeEntry) {
     var issues = [];
 
+    if (negativeEntry) {
+      issues.push({
+        bad: true,
+        title: 'Negative volume entered',
+        detail: 'A reaction or enzyme volume below zero is being ignored, so the water figure is wrong. Correct the highlighted field.'
+      });
+    }
     if (over) {
       issues.push({
         bad: true,
