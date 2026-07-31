@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "Ligation Calculator"
+message: "If you use this tool in published work, please cite it as below."
+type: software
+authors:
+  - family-names: "Afkaar"
+    given-names: "Shafiq"
+repository-code: "https://github.com/ShafiqAfkaar/ligation-calculator"
+url: "https://shafiqafkaar.github.io/ligation-calculator/"
+abstract: >-
+  A dependency-free, single-file browser calculator for setting up ligation,
+  Gibson assembly and homologous-recombination cloning reactions. Converts
+  vector and insert concentrations, lengths and a target molar ratio into
+  pipetting volumes, and flags volumes below the accurate range of an
+  air-displacement pipette.
+keywords:
+  - molecular-cloning
+  - ligation
+  - gibson-assembly
+  - homologous-recombination
+  - molecular-biology
+  - laboratory-tools
+license: MIT
